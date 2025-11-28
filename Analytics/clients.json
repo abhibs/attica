@@ -1,0 +1,116 @@
+{
+    "admin": {
+        "role": "admin",
+        "password": "$2y$10$bhvsf4RamZKfzX2RSoFQ2.F2tvf\/DFvOppZnXNawGUai1FVceVHWu",
+        "desired": true,
+        "listener_status": "ready",
+        "last_seen": 1757053667,
+        "branches": "AGPL002,AGPL001,AGPL003,AGPL004,AGPL005,AGPL006,AGPL097,AGPL017"
+    },
+    "AtticaMaster": {
+        "password": "$2y$10$hvP8bHo\/TyAtpSK2PUUf1.u.YmJneplSy1wjEH6MfGhXiHRi0pB9m",
+        "desired": true,
+        "listener_status": "offline",
+        "last_seen": 1750311158,
+        "role": "admin",
+        "branches": "AGPL001, AGPL002, AGPL003, AGPL004, AGPL005"
+    },
+    "AGPL001": {
+        "name": "Queens Road",
+        "role": "branch",
+        "password": "$2y$10$bhvsf4RamZKfzX2RSoFQ2.F2tvf\/DFvOppZnXNawGUai1FVceVHWu",
+        "desired": true,
+        "listener_status": "offline",
+        "last_seen": 1750918433
+    },
+    "AGPL002": {
+        "name": "Jayanagar",
+        "role": "branch",
+        "password": "$2y$10$bhvsf4RamZKfzX2RSoFQ2.F2tvf\/DFvOppZnXNawGUai1FVceVHWu",
+        "desired": true,
+        "listener_status": "offline",
+        "last_seen": 1750159836
+    },
+    "AGPL003": {
+        "name": "Malleshwaram",
+        "role": "branch",
+        "password": "$2y$10$bhvsf4RamZKfzX2RSoFQ2.F2tvf\/DFvOppZnXNawGUai1FVceVHWu",
+        "desired": true,
+        "listener_status": "offline",
+        "last_seen": 1750241244
+    },
+    "AGPL004": {
+        "name": "Indiranagar",
+        "role": "branch",
+        "password": "$2y$10$bhvsf4RamZKfzX2RSoFQ2.F2tvf\/DFvOppZnXNawGUai1FVceVHWu",
+        "desired": true,
+        "listener_status": "offline",
+        "last_seen": 1750144638
+    },
+    "AGPL005": {
+        "name": "Mysore",
+        "role": "branch",
+        "password": "$2y$10$bhvsf4RamZKfzX2RSoFQ2.F2tvf\/DFvOppZnXNawGUai1FVceVHWu",
+        "desired": true,
+        "listener_status": "offline",
+        "last_seen": 1749630100
+    },
+    "AGPL006": {
+        "name": "Hubli",
+        "role": "branch",
+        "password": "$2y$10$bhvsf4RamZKfzX2RSoFQ2.F2tvf\/DFvOppZnXNawGUai1FVceVHWu",
+        "desired": true,
+        "listener_status": "offline",
+        "last_seen": 1751357702
+    },
+    "AGPL097": {
+        "name": "Frazer Town",
+        "role": "branch",
+        "password": "$2y$10$S2Tmi37.yoFj6uv2NJO5YOF2LWmQfDmnbX04dI8gD\/V\/CctOw99ju",
+        "desired": true,
+        "listener_status": "offline",
+        "last_seen": 1752383849
+    },
+    "VK001": {
+        "role": "admin",
+        "password": "$2y$10$bhvsf4RamZKfzX2RSoFQ2.F2tvf\/DFvOppZnXNawGUai1FVceVHWu",
+        "desired": true,
+        "listener_status": "offline",
+        "last_seen": 1750834818,
+        "branches": "AGPL001,AGPL002"
+    },
+    "VK002": {
+        "role": "admin",
+        "password": "$2y$10$bhvsf4RamZKfzX2RSoFQ2.F2tvf\/DFvOppZnXNawGUai1FVceVHWu",
+        "desired": true,
+        "listener_status": "offline",
+        "last_seen": 1750142608,
+        "branches": "AGPL003,AGPL004"
+    },
+    "VK003": {
+        "password": "$2y$10$d7vtPHjJsse.IbAJuxIWjOba6MFH7Cvxd6f0yI.mRdbnJOOY7obZO",
+        "desired": true,
+        "listener_status": "offline",
+        "last_seen": 1750309616,
+        "role": "admin",
+        "name": "",
+        "branches": "AGPL005, AGPL006"
+    },
+    "VK004": {
+        "password": "$2y$12$pNUldGwXz2JZJkAbZDehJ.hrKfyTPBQkGD97vNPg3v3\/4BfHDVYYe",
+        "desired": true,
+        "listener_status": "offline",
+        "last_seen": 1750851539,
+        "role": "admin",
+        "name": "",
+        "branches": "AGPL097, AGPL017"
+    },
+    "AGPL017": {
+        "password": "$2y$12$hvU3Y7VKlwRCkxPBI0kbUO9wADNCoXoh.HlPszlm\/wgWSDcieehYe",
+        "desired": true,
+        "listener_status": "offline",
+        "last_seen": 1751368270,
+        "role": "branch",
+        "name": "Hosur Main"
+    }
+}

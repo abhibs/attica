@@ -1,0 +1,526 @@
+{
+	
+	"EDI3K81AVOAW": {
+		"id": "EDI3K81AVOAW",
+		"topic": "Appliances",
+		"question": "Are there fans in your branch?",
+		"image": "standing-fan-pic.jpeg",
+		"options": {
+			"Yes": "R0IMSPJERVPS",
+			"No": null
+		},
+		"sms": "Fan"
+	},
+	"R0IMSPJERVPS": {
+		"id": "R0IMSPJERVPS",
+		"topic": "Maintenance",
+		"question": "Are all the fans working correctly without noise/wobbling/rotator issues?",
+		"image": "standing-fan-pic.jpeg",
+		"options": {
+			"Yes": "EQL4B2A3KPYH",
+			"Need Electrician Visit": "EQL4B2A3KPYH"
+		},
+		"sms": "Fan"
+	},
+	"EQL4B2A3KPYH": {
+		"id": "EQL4B2A3KPYH",
+		"topic": "Cleanliness",
+		"question": "Have the fan blades been cleaned properly ? (If not cleaned, do it immediately and choose Yes)?",
+		"image": "dirty-fan-image.jpeg",
+		"options": {
+			"Yes": null,
+			"Ask me later": null
+		},
+		"sms": "Fan"
+	},
+
+
+	"X3IV1CRYWQV3": {
+		"id": "X3IV1CRYWQV3",
+		"topic": "Branding",
+		"question": "Is there a name board in your branch",
+		"image": "name_board.jpg",
+		"options": {
+			"Yes": "0H3ESK02FVS6",
+			"No": null
+		},
+		"sms": "NameBoard"
+	},
+	"0H3ESK02FVS6": {
+		"id": "0H3ESK02FVS6",
+		"topic": "Branding",
+		"question": "Is the name board visible from a distance without issues due to font/colour (Needs to be Red and Gold)?",
+		"image": "name-board-colour-issue.jpeg",
+		"options": {
+			"Yes": "FJW6YU5OQEBM",
+			"No": "FJW6YU5OQEBM"
+		},
+		"sms": "NameBoard"
+	},
+	"FJW6YU5OQEBM": {
+		"id": "FJW6YU5OQEBM",
+		"topic": "Branding",
+		"question": "Is it an electrical/lighting Name Board?",
+		"image": "lighting-board.jpeg",
+		"options": {
+			"Yes": "3MH4FAOAHDXL",
+			"No": null
+		},
+		"sms": "NameBoard"
+	},
+	"3MH4FAOAHDXL": {
+		"id": "3MH4FAOAHDXL",
+		"topic": "Maintenance",
+		"question": "Do you manually switch on/switch off the name board lights everyday?",
+		"image": "lighting-board.jpeg",
+		"options": {
+			"Yes": null,
+			"No": "FSCI5BMH8THW"
+		},
+		"sms": "NameBoard"
+	},
+	"FSCI5BMH8THW": {
+		"id": "FSCI5BMH8THW",
+		"topic": "Maintenance",
+		"question": "Does the automatic name board lighting timer work?",
+		"image": "lighting-board.jpeg",
+		"options": {
+			"Yes": null,
+			"No": null
+		},
+		"sms": "NameBoard"
+	},
+
+
+	"C5PMARCBJIPL": {
+		"id": "C5PMARCBJIPL",
+		"topic": "Appliances",
+		"question": "Is there a power backup (UPS) present in the branch?",
+		"image": "ups-backup-battery-system.jpg",
+		"options": {
+			"Yes": "XAHC3QRPMRE0",
+			"No": null
+		},
+		"sms": "UPS"
+	},
+	"XAHC3QRPMRE0": {
+		"id": "XAHC3QRPMRE0",
+		"topic": "Maintenance",
+		"question": "Is the UPS working correctly without any issues?",
+		"image": "ups-backup-battery-system.jpg",
+		"options": {
+			"Yes": "EEHKHV5QGUQK",
+			"No": "EEHKHV5QGUQK"
+		},
+		"sms": "UPS"
+	},
+	"EEHKHV5QGUQK": {
+		"id": "EEHKHV5QGUQK",
+		"topic": "Cleanliness",
+		"question": "Has the UPS area been cleaned/dusted appropriately?",
+		"image": "dirty-ups-area.jpg",
+		"options": {
+			"Yes": null,
+			"Ask me later": null
+		} ,
+		"sms": "UPS"
+	},
+
+
+	"XGGCU605P10N": {
+		"id": "XGGCU605P10N",
+		"topic": "Maintenance",
+		"question": "Is the Computer working correctly without any issues?",
+		"image": "Standard-Desktop-Computer-Case-With-Monitor-Keyboard-Mouse.jpg",
+		"options": {
+			"Yes": null,
+			"No": null
+		},
+		"sms": ""
+	},
+
+
+	"7ZC646EYDCHF": {
+		"id": "7ZC646EYDCHF",
+		"topic": "Maintenance",
+		"question": "Is the Keyboard working correctly?",
+		"image": "keyboard.jpeg",
+		"options": {
+			"Yes": null,
+			"No": null
+		} ,
+		"sms": ""
+	},
+
+
+	"P480D59E1UG3": {
+		"id": "P480D59E1UG3",
+		"topic": "Maintenance",
+		"question": "Is the Mouse working correctly?",
+		"image": "mouse.jpeg",
+		"options": {
+			"Yes": null,
+			"No": null
+		} ,
+		"sms": ""
+	},
+
+
+	"DR8LZ2ZN47SD": {
+		"id": "DR8LZ2ZN47SD",
+		"topic": "Cleanliness",
+		"question": "Is the Computer and area surrounding it been cleaned appropriately?",
+		"image": "clean-pc.jpg",
+		"options": {
+			"Yes": null,
+			"Ask me later": null
+		} ,
+		"sms": "Computer Area"
+	},
+
+
+	"YLD48QM4HQ4D": {
+		"id": "YLD48QM4HQ4D",
+		"topic": "Maintenance",
+		"question": "Are all the lights inside and outside working correctly?",
+		"image": "ceiling-lights.jpg",
+		"options": {
+			"Yes": null,
+			"No": null
+		},
+		"sms": "Faulty Lights"
+	},
+
+
+	"NU8WXY6NP93Q": {
+		"id": "NU8WXY6NP93Q",
+		"topic": "Appliances",
+		"question": "Is there an AC in your branch?",
+		"image": "AC.jpg",
+		"options": {
+			"Yes": "3C9F12C1JWAB",
+			"No": null
+		} ,
+		"sms": "AC"
+	},
+	"3C9F12C1JWAB": {
+		"id": "3C9F12C1JWAB",
+		"topic": "Maintenance",
+		"question": "Is the AC working properly?",
+		"image": "AC.jpg",
+		"options": {
+			"Yes": "T0EZA7AHCJ95",
+			"No": "T0EZA7AHCJ95"
+		} ,
+		"sms": "AC"
+	},
+	"T0EZA7AHCJ95": {
+		"id": "T0EZA7AHCJ95",
+		"topic": "Appliances",
+		"question": "Has the AC filter been cleaned?",
+		"image": "ac-filter-cleaning.jpg",
+		"options": {
+			"Yes": null,
+			"Ask me later": null
+		} ,
+		"sms": "AC"
+	},
+
+
+	"DAP7964M4HJQ": {
+		"id": "DAP7964M4HJQ",
+		"topic": "Branding",
+		"question": "Is your branch located on a higher floor (1st, 2nd or 3rd floor)?",
+		"image": "high-floor.jpeg",
+		"options": {
+			"Yes": "Z335RL9I6RDO",
+			"No": null
+		},
+		"sms": "Building Front View"
+	},
+	"Z335RL9I6RDO": {
+		"id": "Z335RL9I6RDO",
+		"topic": "Branding",
+		"question": "Does the lift have company sticker with floor mentioned?",
+		"image": "floor-number-sign.jpg",
+		"options": {
+			"Yes": null,
+			"No": null
+		} ,
+		"sms": "Company Sticker in Lift"
+	},
+
+
+	"P03R64A1FX47": {
+		"id": "P03R64A1FX47",
+		"topic": "Branding",
+		"question": "Does the entrance have proper Direction Sign boards?",
+		"image": "signage.jpeg",
+		"options": {
+			"Yes": null,
+			"No": null
+		} ,
+		"sms": "Sign Boards"
+	},
+
+
+	"XHF82NEK9VT3": {
+		"id": "XHF82NEK9VT3",
+		"topic": "Cleanliness",
+		"question": "Do you Light the Agarbathi sticks everyday?",
+		"image": "Agarbathi.jpeg",
+		"options": {
+			"Yes": null,
+			"No": null
+		},
+		"sms": "Agarbathi"
+	},
+
+
+	"W870ICI3LNF5": {
+		"id": "W870ICI3LNF5",
+		"topic": "Cleanliness",
+		"question": "Is the transaction table and customer seating section neat and tidy?",
+		"image": "table.jpg",
+		"options": {
+			"Yes": null,
+			"Ask me later": null
+		} ,
+		"sms": "Table"
+	},
+
+
+	"F9J775T57M9H": {
+		"id": "F9J775T57M9H",
+		"topic": "Cleanliness",
+		"question": "Have you Removed the cleaning supplies/Extra watercans away from the customer's view?",
+		"image": "cleaning-supplies.jpg",
+		"options": {
+			"Yes": null,
+			"Ask me later": null
+		} ,
+		"sms": "Cleaning-Supplies"
+	},
+
+
+	"DF64X5KD1PBZ": {
+		"id": "DF64X5KD1PBZ",
+		"topic": "Maintenance",
+		"question": "Does the printer work properly?",
+		"image": "printer.jpg",
+		"options": {
+			"Yes": null,
+			"Need IT support": null
+		},
+		"sms": "Printer"
+	},
+
+
+	"Q7KX3NC86V67": {
+		"id": "Q7KX3NC86V67",
+		"topic": "Maintenance",
+		"question": "Does the cash counting machine work properly?",
+		"image": "cash-counter.png",
+		"options": {
+			"Yes": null,
+			"Need IT support": null
+		} ,
+		"sms": "Cash-Counting-Machine"
+	},
+
+
+	"TS6HQCMG78CG": {
+		"id": "TS6HQCMG78CG",
+		"topic": "Maintenance",
+		"question": "Is the Karatmeter working perfectly without any calibration issues?",
+		"image": "karatmeter-branch.jpg",
+		"options": {
+			"Yes": null,
+			"Need IT support": null
+		} ,
+		"sms": "Karatmeter"
+	},
+
+
+	"V6FLT8S5TW5A": {
+		"id": "V6FLT8S5TW5A",
+		"topic": "Maintenance",
+		"question": "Is the Internet working fine?",
+		"image": "airtel-wired-fiber-router.jpg",
+		"options": {
+			"Yes": null,
+			"Need IT support": null
+		} ,
+		"sms": "Internet-Router"
+	},	
+
+
+	"Y8Q0QIW2MI79": {
+		"id": "Y8Q0QIW2MI79",
+		"topic": "Business Tools",
+		"question": "Do you have a calculator in the branch?",
+		"image": "calculator.jpg",
+		"options": {
+			"Yes": null,
+			"No": null
+		},
+		"sms": "Calculator"
+	},
+
+
+	"QH5K109KM4U8": {
+		"id": "QH5K109KM4U8",
+		"topic": "Business Tools",
+		"question": "Do you have a gold cutter in the branch?",
+		"image": "gold-cutter.jpg",
+		"options": {
+			"Yes": null,
+			"No": null
+		} ,
+		"sms": "Gold-Cutter"
+	},
+
+
+	"C4CKZ87E39YR": {
+		"id": "C4CKZ87E39YR",
+		"topic": "Business Tools",
+		"question": "Do you have a Gold plyer in the branch?",
+		"image": "gold-plyer.jpeg",
+		"options": {
+			"Yes": null,
+			"No": null
+		} ,
+		"sms": "Gold-Plyer"
+	},
+
+
+	"A6H8M0AZ690O": {
+		"id": "A6H8M0AZ690O",
+		"topic": "Online Presence",
+		"question": "Is the branch location on Google Maps accurate?",
+		"image": "GMaps.jpeg",
+		"options": {
+			"Yes": null,
+			"No": null
+		},
+		"sms": "Google-Maps"
+	},
+
+
+	"X99HYEG2FNMV": {
+		"id": "X99HYEG2FNMV",
+		"topic": "Online Presence",
+		"question": "Are there any Attica Ads visible from your branch location? (check in browser via incognito mode and search 'Attica')?",
+		"image": "online-presence.jpeg",
+		"options": {
+			"Yes": null,
+			"No": null
+		} ,
+		"sms": "Attica-Ad"
+	},
+
+
+	"NN642223ESLA": {
+		"id": "NN642223ESLA",
+		"topic": "Online Presence",
+		"question": "Are there any competitor Ads visible from your branch location? (check in browser via incognito mode and search 'gold buyers near me')?",
+		"image": "",
+		"options": {
+			"Yes": null,
+			"No": null
+		} ,
+		"sms": "Competitor-Ads"
+	},
+
+
+	"J5J00QPZCY2U": {
+		"id": "J5J00QPZCY2U",
+		"topic": "Business Tools",
+		"question": "Is there a gold file in the branch?",
+		"image": "gold-file.jpg",
+		"options": {
+			"Yes": null,
+			"No": null
+		},
+		"sms": "Gold-File"
+	},
+
+
+	"MN9U74ZNB2E2": {
+		"id": "MN9U74ZNB2E2",
+		"topic": "Business Tools",
+		"question": "Do you have a V-shaped Hook in the branch?",
+		"image": "v-shaped-hook.jpeg",
+		"options": {
+			"Yes": null,
+			"No": null
+		} ,
+		"sms": "V-shaped-Hook"
+	},
+
+
+	"G602T62E5DG4": {
+		"id": "G602T62E5DG4",
+		"topic": "Service",
+		"question": "Do you have feedback QR code displayed in your branch?",
+		"image": "feedback.png",
+		"options": {
+			"Yes": null,
+			"No": null
+		} ,
+		"sms": "Feedback-QR-Code"
+	},
+
+
+	"PEEM30219Q6D": {
+		"id": "PEEM30219Q6D",
+		"topic": "Cleanliness",
+		"question": "Have the table trays been cleaned properly?",
+		"image": "table-tray.jpeg",
+		"options": {
+			"Yes": null,
+			"Ask me later": null
+		} ,
+		"sms": "Table-Trays"
+	},
+
+
+	"X7AXAX11IH2Q": {
+		"id": "X7AXAX11IH2Q",
+		"topic": "Business Tools",
+		"question": "Do you have a Magnifying glass in the branch?",
+		"image": "magnifying-glass.jpeg",
+		"options": {
+			"Yes": null,
+			"No": null
+		},
+		"sms": "Magnifying-Glass"
+	},
+
+
+	"TH55PTDX4YA5": {
+		"id": "TH55PTDX4YA5",
+		"topic": "Business Tools",
+		"question": "Do you have Acid and Stone in the branch for conducting acid test?",
+		"image": "acid-stone.jpeg",
+		"options": {
+			"Yes": null,
+			"No": null
+		} ,
+		"sms": "Acid-And-Stone"
+	},
+
+	
+	"W1C517NUCUAQ": {
+		"id": "W1C517NUCUAQ",
+		"topic": "Service",
+		"question": "Do you have a magnet in the branch?",
+		"image": "magnet.png",
+		"options": {
+			"Yes": null,
+			"No": null
+		} ,
+		"sms": "Magnet"
+	}
+
+}

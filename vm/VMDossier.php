@@ -1,0 +1,752 @@
+<?php
+/* ================================
+   Branch Data Entry + DataTables
+   ================================ */
+
+session_start();
+
+/* ---- Header / Menus by role ---- */
+$type = $_SESSION['usertype'] ?? '';
+if ($type=='Software'){ include("../header.php"); include("../menuSoftware.php"); }
+elseif ($type=='Branch'){ include("header.php"); include("menu.php"); }
+elseif ($type=='VM-HO'){ include("headervc.php"); include("menuvc.php"); }
+else { include("logout.php"); exit; }
+
+/* ---- DB ---- */
+include("dbConnection.php");
+@mysqli_set_charset($con,'utf8mb4');
+
+/* ---- Session helpers ---- */
+$branchCode  = $_SESSION['branchCode'] ?? '';
+$currentUser = $_SESSION['login_username']
+            ?? $_SESSION['employeeId']
+            ?? $_SESSION['employeeName']
+            ?? '';
+$employeeId  = $_SESSION['employeeId'] ?? '';   // used for vmagent.agentId
+
+/* ---- Prefill from ?id=... (optional) ---- */
+$rowres = ['branch'=>'','customer'=>'','contact'=>''];
+if (!empty($_GET['id'])) {
+  $safeId = mysqli_real_escape_string($con, $_GET['id']);
+  $q = "SELECT branch, customer, contact FROM everycustomer WHERE id='$safeId' LIMIT 1";
+  if ($tmp = mysqli_fetch_assoc(mysqli_query($con, $q))) {
+      $rowres = $tmp;
+  }
+}
+
+/* ---- Small helpers ---- */
+function nv($k){ return isset($_POST[$k]) && trim($_POST[$k])!=='' ? trim($_POST[$k]) : NULL; }
+function esc($con,$s){ return mysqli_real_escape_string($con,(string)$s); }
+
+/* =========================================
+   BRANCH DROPDOWN: vmagent + branch tables
+   ========================================= */
+$branchSelectHtml = '<option value="">-- Select Branch --</option>';
+$branchMap        = [];   // branchId => branchName
+
+if ($employeeId !== '') {
+    // 1) Get all branch CSV strings for this agent
+    $stmt = $con->prepare("SELECT branch FROM vmagent WHERE agentId = ?");
+    $stmt->bind_param("s", $employeeId);
+    $stmt->execute();
+    $res  = $stmt->get_result();
+    $idsSet = [];
+    while ($row = $res->fetch_assoc()) {
+        $csv = $row['branch'] ?? '';
+        foreach (explode(',', $csv) as $b) {
+            $b = trim($b);
+            if ($b !== '') {
+                $idsSet[$b] = true;
+            }
+        }
+    }
+    $stmt->close();
+
+    $branchIds = array_keys($idsSet);
+    if (!empty($branchIds)) {
+        // 2) Fetch proper names from branch table
+        $safeIds = array_map(function($b) use($con){ return "'".esc($con,$b)."'"; }, $branchIds);
+        $sql = "SELECT branchId, branchName FROM branch
+                WHERE branchId IN (".implode(',', $safeIds).")
+                ORDER BY branchName";
+        $rs  = mysqli_query($con, $sql);
+        while ($r = mysqli_fetch_assoc($rs)) {
+            $bid = $r['branchId'];
+            $bname = $r['branchName'];
+            $branchMap[$bid] = $bname;
+        }
+    }
+}
+
+// Fallback: if nothing from vmagent, but branchCode exists, just show that code
+if (empty($branchMap) && $branchCode !== '') {
+    $branchMap[$branchCode] = $branchCode;
+}
+
+// Build <option> HTML
+foreach($branchMap as $bid => $bname){
+    $sel = ($bid == $branchCode) ? ' selected' : '';
+    $label = $bid . ' - ' . $bname;
+    $branchSelectHtml .= '<option value="'.htmlspecialchars($bid,ENT_QUOTES,'UTF-8').'"'.$sel.'>'.
+                         htmlspecialchars($label,ENT_QUOTES,'UTF-8').'</option>';
+}
+
+/* =========================
+   AJAX: Update / Delete rows
+   ========================= */
+if (!empty($_POST['ajax'])) {
+  header('Content-Type: application/json');
+
+  $action = $_POST['action'] ?? '';
+  $table  = $_POST['table']  ?? '';
+  $id     = $_POST['id']     ?? '';
+
+  $allowed = [
+    'branch_visits' => ['date_','time_','branch_name','customer_name','contact_no','visit_type','gross_wt','net_wt','bill_enquiry','purity_pct','rel_amount'],
+    'release_gold'  => ['date_','time_','branch_name','customer_name','mobile_no','release_amount','gross_wt','net_wt','gross_amount','net_amount','margin_','release_place','release_name_te_vo','bill_no'],
+    'branch_contacts'=>['branch_name','designation','staff_name','mobile_no'],
+    'daily_branch_cash'=>[
+      'branch_name','date_','opening_cash','ho_fund_receive','inter_branch_fund_receive','re_pledge_commission',
+      'imps_rtgs','inter_branch_fund_transfer','business_amt','branch_expns','today_gold','today_silver',
+      'closing_balance','deno_2000_count','deno_500_count','deno_200_count','deno_100_count','deno_50_count',
+      'deno_20_count','deno_10_count','deno_5_count','deno_2_count','deno_1_count','deno_total',
+      'no_of_visit','no_of_business','no_of_enquiry'
+    ]
+  ];
+
+  if (!isset($allowed[$table])) {
+    echo json_encode(['ok'=>false,'msg'=>'Invalid table']); exit;
+  }
+
+  if ($action==='update') {
+    $payload = $_POST['payload'] ?? [];
+    if (!is_array($payload)) $payload = [];
+
+    $cols = [];
+    $vals = [];
+    foreach($payload as $k=>$v){
+      if (in_array($k, $allowed[$table], true)) {
+        $cols[] = "`$k` = ?";
+        $vals[] = $v;
+      }
+    }
+    if (empty($cols)) {
+        echo json_encode(['ok'=>false,'msg'=>'No valid fields']); exit;
+    }
+
+    $sql = "UPDATE $table SET ".implode(', ',$cols)." WHERE id=? AND created_by=?";
+    $stmt = $con->prepare($sql);
+    $types = str_repeat('s', count($vals)) . "ss";
+    $vals[] = $id;
+    $vals[] = $currentUser;
+    $stmt->bind_param($types, ...$vals);
+    $ok = $stmt->execute();
+    $stmt->close();
+    echo json_encode(['ok'=>$ok]); exit;
+  }
+  elseif ($action==='delete') {
+    // Delete only in branch_contacts
+    if ($table!=='branch_contacts') {
+        echo json_encode(['ok'=>false,'msg'=>'Delete allowed only for branch_contacts']); 
+        exit;
+    }
+
+    // delete only by id (simpler & avoids created_by mismatch issues)
+    $stmt = $con->prepare("DELETE FROM branch_contacts WHERE id = ?");
+    // if id column is INT in DB (most likely), bind as integer:
+    $idInt = (int)$id;
+    $stmt->bind_param("i", $idInt);
+
+    $stmt->execute();
+    $ok = ($stmt->affected_rows > 0);  
+    $stmt->close();
+
+    echo json_encode(['ok'=>$ok]); 
+    exit;
+}
+}
+/* =====================
+   INSERT HANDLERS
+   ===================== */
+$today = date('Y-m-d');
+$now   = date('H:i:s');
+
+if (isset($_POST['save_visit'])) {
+  $v_date = nv('v_date') ?: $today;
+  $v_time = nv('v_time') ?: $now;
+  $stmt=$con->prepare(
+    "INSERT INTO branch_visits
+     (date_,time_,branch_name,customer_name,contact_no,visit_type,gross_wt,net_wt,bill_enquiry,purity_pct,rel_amount,created_by)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+  );
+  $stmt->bind_param("ssssssssssss",
+    $v_date, $v_time, nv('v_branch'), nv('v_customer'),
+    nv('v_contact'), nv('v_type'), nv('v_gross_wt'), nv('v_net_wt'),
+    nv('v_bill_enq'), nv('v_purity'), nv('v_rel_amt'), $currentUser
+  );
+  $ok_visit = $stmt->execute(); $stmt->close();
+}
+
+if (isset($_POST['save_release'])) {
+  $r_date = nv('r_date') ?: $today;
+  $r_time = nv('r_time') ?: $now;
+  $stmt=$con->prepare(
+    "INSERT INTO release_gold
+     (date_,time_,branch_name,customer_name,mobile_no,release_amount,gross_wt,net_wt,gross_amount,net_amount,margin_,release_place,release_name_te_vo,bill_no,created_by)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+  );
+  $stmt->bind_param("sssssssssssssss",
+    $r_date, $r_time, nv('r_branch'), nv('r_customer'),
+    nv('r_mobile'), nv('r_release_amount'), nv('r_gross_wt'), nv('r_net_wt'),
+    nv('r_gross_amount'), nv('r_net_amount'), nv('r_margin'), nv('r_place'),
+    nv('r_te_vo'), nv('r_bill'), $currentUser
+  );
+  $ok_release = $stmt->execute(); $stmt->close();
+}
+
+if (isset($_POST['save_contact'])) {
+  $stmt=$con->prepare(
+    "INSERT INTO branch_contacts
+     (branch_name,designation,staff_name,mobile_no,created_by)
+     VALUES (?,?,?,?,?)"
+  );
+  $stmt->bind_param("sssss",
+    nv('c_branch'), nv('c_designation'), nv('c_name'), nv('c_mobile'), $currentUser
+  );
+  $ok_contact = $stmt->execute(); $stmt->close();
+}
+
+if (isset($_POST['save_cash'])) {
+  $d_date = nv('d_date') ?: $today;
+  $stmt=$con->prepare(
+    "INSERT INTO daily_branch_cash
+     (branch_name,date_,opening_cash,ho_fund_receive,inter_branch_fund_receive,re_pledge_commission,imps_rtgs,inter_branch_fund_transfer,
+      business_amt,branch_expns,today_gold,today_silver,closing_balance,
+      deno_2000_count,deno_500_count,deno_200_count,deno_100_count,deno_50_count,deno_20_count,deno_10_count,deno_5_count,deno_2_count,deno_1_count,deno_total,
+      no_of_visit,no_of_business,no_of_enquiry,created_by)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+  );
+  $stmt->bind_param("ssssssssssssssssssssssssssss",
+    nv('d_branch'), $d_date, nv('d_opening_cash'), nv('d_ho_fund_receive'),
+    nv('d_inter_branch_receive'), nv('d_re_pledge_commission'), nv('d_imps_rtgs'),
+    nv('d_inter_branch_transfer'), nv('d_business_amt'), nv('d_branch_expns'),
+    nv('d_today_gold'), nv('d_today_silver'), nv('d_closing_balance'),
+    nv('deno_2000'), nv('deno_500'), nv('deno_200'), nv('deno_100'), nv('deno_50'),
+    nv('deno_20'), nv('deno_10'), nv('deno_5'), nv('deno_2'), nv('deno_1'), nv('deno_total'),
+    nv('no_visit'), nv('no_business'), nv('no_enquiry'), $currentUser
+  );
+  $ok_cash = $stmt->execute(); $stmt->close();
+}
+
+/* =====================
+   READ QUERIES
+   ===================== */
+$u = esc($con, $currentUser);
+
+/* Today only for Visits / Release / Cash; Contacts = all days */
+$q_visit =
+ "SELECT id,date_,time_,branch_name,customer_name,contact_no,visit_type,gross_wt,net_wt,bill_enquiry,purity_pct,rel_amount
+  FROM branch_visits
+  WHERE created_by = '$u'
+    AND date_ = CURDATE()
+  ORDER BY date_ DESC, time_ DESC
+  LIMIT 500";
+
+$q_release =
+ "SELECT id,date_,time_,branch_name,customer_name,mobile_no,release_amount,gross_wt,net_wt,gross_amount,net_amount,margin_,release_place,release_name_te_vo,bill_no
+  FROM release_gold
+  WHERE created_by = '$u'
+    AND date_ = CURDATE()
+  ORDER BY date_ DESC, time_ DESC
+  LIMIT 500";
+
+$q_contact =
+ "SELECT id,branch_name,designation,staff_name,mobile_no
+  FROM branch_contacts
+  WHERE created_by = '$u'
+  ORDER BY branch_name ASC, staff_name ASC
+  LIMIT 1000";
+
+$q_cash =
+ "SELECT id,date_,branch_name,opening_cash,ho_fund_receive,inter_branch_fund_receive,re_pledge_commission,imps_rtgs,inter_branch_fund_transfer,business_amt,branch_expns,today_gold,today_silver,closing_balance,deno_total,no_of_visit,no_of_business,no_of_enquiry
+  FROM daily_branch_cash
+  WHERE created_by = '$u'
+    AND date_ = CURDATE()
+  ORDER BY date_ DESC
+  LIMIT 500";
+
+$r_visit   = mysqli_query($con, $q_visit);
+$r_release = mysqli_query($con, $q_release);
+$r_contact = mysqli_query($con, $q_contact);
+$r_cash    = mysqli_query($con, $q_cash);
+
+?>
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Branch Data Entry</title>
+
+<link rel="stylesheet" href="../vendor/fontawesome/css/font-awesome.css">
+<link rel="stylesheet" href="../vendor/bootstrap/dist/css/bootstrap.css">
+<link rel="stylesheet" href="../styles/style.css">
+<script src="../scripts/jquery.js"></script>
+
+<!-- DataTables -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap.min.css">
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap.min.js"></script>
+
+<style>
+  html, body { height:100%; }
+  body { overflow-x:hidden; background:#f3f5f9; }
+  :root { --sidebar-w: 240px; }
+  #wrapper.with-sidebar { padding:12px 16px 28px; }
+  @media (min-width: 992px){ #wrapper.with-sidebar #page-content { margin-left: var(--sidebar-w); } }
+  #page-content { max-width:1280px; margin:0 auto; }
+
+  .panel { margin-bottom:24px; border:1px solid #e6ebf2; border-radius:10px; overflow:hidden; }
+  .panel-heading { background:#fff; border-bottom:1px solid #eef2f7; padding:12px 16px; }
+  .panel-title { margin:0; font-weight:700; text-transform:uppercase; color:#123C69; font-size:15px; letter-spacing:.2px; }
+  .panel-body { background:#fff; padding:16px; box-shadow:none !important; }
+
+  .form-row{margin-left:-10px;margin-right:-10px}
+  .form-row > [class*="col-"]{padding-left:10px;padding-right:10px;margin-bottom:12px}
+  label{font-size:12px;font-weight:600;color:#163a61;text-transform:uppercase;margin-top:6px}
+  .form-control{height:36px}
+  .btn-success{background:#123C69;border:0}
+  .note{margin:8px 0 12px;color:#1a7f37;font-weight:600}
+
+  .editable { background: #fffdf2; outline: 1px dashed #e8d37b; }
+  .row-actions { white-space: nowrap; }
+
+  table.dataTable thead th { font-size:12px; text-transform:uppercase; color:#163a61; }
+  .dt-container{padding-top:10px}
+</style>
+</head>
+<body>
+
+<div id="wrapper" class="with-sidebar">
+  <div id="page-content">
+
+    <!-- 1) CUSTOMER VISIT -->
+    <div class="panel panel-default">
+      <div class="panel-heading"><h3 class="panel-title">1) Customer Visit in Branch</h3></div>
+      <div class="panel-body">
+        <?php if(!empty($ok_visit)) echo '<div class="note">Saved: Customer Visit in Branch.</div>'; ?>
+        <form method="post">
+          <div class="row form-row">
+            <div class="col-lg-4 col-md-6">
+              <label>Date</label>
+              <input class="form-control" name="v_date" id="v_date" placeholder="YYYY-MM-DD" value="<?php echo date('Y-m-d'); ?>">
+            </div>
+            <div class="col-lg-4 col-md-6">
+              <label>Time</label>
+              <input class="form-control" name="v_time" id="v_time" placeholder="HH:MM:SS" value="<?php echo date('H:i:s'); ?>">
+            </div>
+
+            <div class="col-lg-4 col-md-6">
+              <label>Branch Name</label>
+              <select class="form-control" name="v_branch">
+                <?php echo $branchSelectHtml; ?>
+              </select>
+            </div>
+            <div class="col-lg-4 col-md-6">
+              <label>Customer Name</label>
+              <input class="form-control" name="v_customer" value="<?php echo htmlspecialchars($rowres['customer']); ?>">
+            </div>
+            <div class="col-lg-4 col-md-6">
+              <label>Contact No</label>
+              <input class="form-control" name="v_contact" value="<?php echo htmlspecialchars($rowres['contact']); ?>">
+            </div>
+
+            <div class="col-lg-4 col-md-6">
+              <label>Physical / Release</label>
+              <select class="form-control" name="v_type">
+                <option value="">-- Select --</option>
+                <option value="Physical">Physical</option>
+                <option value="Release">Release</option>
+              </select>
+            </div>
+            <div class="col-lg-4 col-md-6">
+              <label>Gross w/t</label><input class="form-control" name="v_gross_wt"></div>
+            <div class="col-lg-4 col-md-6">
+              <label>Net w/t</label><input class="form-control" name="v_net_wt"></div>
+
+            <div class="col-lg-4 col-md-6">
+              <label>Bill / Enquiry</label>
+              <select class="form-control" name="v_bill_enq">
+                <option value="">-- Select --</option>
+                <option value="Bill">Bill</option>
+                <option value="Enquiry">Enquiry</option>
+              </select>
+            </div>
+            <div class="col-lg-4 col-md-6">
+              <label>Purity %</label><input class="form-control" name="v_purity"></div>
+            <div class="col-lg-4 col-md-6">
+              <label>Rel Amount</label><input class="form-control" name="v_rel_amt"></div>
+          </div>
+          <button class="btn btn-success" name="save_visit" type="submit"><i class="fa fa-save"></i> Save Visit</button>
+        </form>
+
+        <!-- DataTable: Visits -->
+        <div class="dt-container">
+          <table id="visitTable" class="table table-striped table-bordered">
+            <thead>
+              <tr>
+                <th>Date</th><th>Time</th><th>Branch</th><th>Customer</th><th>Contact</th>
+                <th>Type</th><th>Gross</th><th>Net</th><th>Bill/Enq</th><th>Purity%</th><th>Rel Amt</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+            <?php if($r_visit){ while($r = mysqli_fetch_assoc($r_visit)){ ?>
+              <tr data-table="branch_visits" data-id="<?=htmlspecialchars($r['id'])?>">
+                <td contenteditable="true" class="editable" data-col="date_"><?=htmlspecialchars($r['date_']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="time_"><?=htmlspecialchars($r['time_']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="branch_name"><?=htmlspecialchars($r['branch_name']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="customer_name"><?=htmlspecialchars($r['customer_name']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="contact_no"><?=htmlspecialchars($r['contact_no']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="visit_type"><?=htmlspecialchars($r['visit_type']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="gross_wt"><?=htmlspecialchars($r['gross_wt']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="net_wt"><?=htmlspecialchars($r['net_wt']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="bill_enquiry"><?=htmlspecialchars($r['bill_enquiry']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="purity_pct"><?=htmlspecialchars($r['purity_pct']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="rel_amount"><?=htmlspecialchars($r['rel_amount']??'')?></td>
+                <td class="row-actions">
+                  <button class="btn btn-xs btn-primary js-save-row"><i class="fa fa-save"></i></button>
+                </td>
+              </tr>
+            <?php }} ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2) RELEASE GOLD -->
+    <div class="panel panel-default">
+      <div class="panel-heading"><h3 class="panel-title">2) Release Gold</h3></div>
+      <div class="panel-body">
+        <?php if(!empty($ok_release)) echo '<div class="note">Saved: Release Gold.</div>'; ?>
+        <form method="post">
+          <div class="row form-row">
+            <div class="col-lg-4 col-md-6">
+              <label>Date</label>
+              <input class="form-control" name="r_date" id="r_date" value="<?php echo date('Y-m-d'); ?>">
+            </div>
+            <div class="col-lg-4 col-md-6">
+              <label>Time</label>
+              <input class="form-control" name="r_time" id="r_time" value="<?php echo date('H:i:s'); ?>">
+            </div>
+
+            <div class="col-lg-4 col-md-6">
+              <label>Branch Name</label>
+              <select class="form-control" name="r_branch">
+                <?php echo $branchSelectHtml; ?>
+              </select>
+            </div>
+            <div class="col-lg-4 col-md-6"><label>Customer Name</label><input class="form-control" name="r_customer"></div>
+            <div class="col-lg-4 col-md-6"><label>Mobile No</label><input class="form-control" name="r_mobile"></div>
+
+            <div class="col-lg-4 col-md-6"><label>Release Amount</label><input class="form-control" name="r_release_amount"></div>
+            <div class="col-lg-4 col-md-6"><label>Gross w/t</label><input class="form-control" name="r_gross_wt"></div>
+            <div class="col-lg-4 col-md-6"><label>Net w/t</label><input class="form-control" name="r_net_wt"></div>
+
+            <div class="col-lg-4 col-md-6"><label>Gross Amount</label><input class="form-control" name="r_gross_amount"></div>
+            <div class="col-lg-4 col-md-6"><label>Net Amount</label><input class="form-control" name="r_net_amount"></div>
+            <div class="col-lg-4 col-md-6"><label>Margin</label><input class="form-control" name="r_margin"></div>
+
+            <div class="col-lg-4 col-md-6"><label>Release Place</label><input class="form-control" name="r_place"></div>
+            <div class="col-lg-4 col-md-6"><label>Release Name - T.E & VO Sir</label><input class="form-control" name="r_te_vo"></div>
+            <div class="col-lg-4 col-md-6"><label>Bill</label><input class="form-control" name="r_bill"></div>
+          </div>
+          <button class="btn btn-success" name="save_release" type="submit"><i class="fa fa-save"></i> Save Release</button>
+        </form>
+
+        <!-- DataTable: Release -->
+        <div class="dt-container">
+          <table id="releaseTable" class="table table-striped table-bordered">
+            <thead>
+              <tr>
+                <th>Date</th><th>Time</th><th>Branch</th><th>Customer</th><th>Mobile</th>
+                <th>Rel Amt</th><th>GrossW</th><th>NetW</th><th>Gross Amt</th><th>Net Amt</th><th>Margin</th><th>Place</th><th>TE/VO</th><th>Bill</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+            <?php if($r_release){ while($r = mysqli_fetch_assoc($r_release)){ ?>
+              <tr data-table="release_gold" data-id="<?=htmlspecialchars($r['id'])?>">
+                <td contenteditable="true" class="editable" data-col="date_"><?=htmlspecialchars($r['date_']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="time_"><?=htmlspecialchars($r['time_']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="branch_name"><?=htmlspecialchars($r['branch_name']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="customer_name"><?=htmlspecialchars($r['customer_name']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="mobile_no"><?=htmlspecialchars($r['mobile_no']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="release_amount"><?=htmlspecialchars($r['release_amount']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="gross_wt"><?=htmlspecialchars($r['gross_wt']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="net_wt"><?=htmlspecialchars($r['net_wt']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="gross_amount"><?=htmlspecialchars($r['gross_amount']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="net_amount"><?=htmlspecialchars($r['net_amount']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="margin_"><?=htmlspecialchars($r['margin_']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="release_place"><?=htmlspecialchars($r['release_place']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="release_name_te_vo"><?=htmlspecialchars($r['release_name_te_vo']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="bill_no"><?=htmlspecialchars($r['bill_no']??'')?></td>
+                <td class="row-actions">
+                  <button class="btn btn-xs btn-primary js-save-row"><i class="fa fa-save"></i></button>
+                </td>
+              </tr>
+            <?php }} ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3) BRANCH CONTACT -->
+    <div class="panel panel-default">
+      <div class="panel-heading"><h3 class="panel-title">3) Branch Contact</h3></div>
+      <div class="panel-body">
+        <?php if(!empty($ok_contact)) echo '<div class="note">Saved: Branch Contact.</div>'; ?>
+        <form method="post">
+          <div class="row form-row">
+            <div class="col-lg-4 col-md-6">
+              <label>Branch Name</label>
+              <select class="form-control" name="c_branch">
+                <?php echo $branchSelectHtml; ?>
+              </select>
+            </div>
+            <div class="col-lg-4 col-md-6"><label>Designation</label><input class="form-control" name="c_designation"></div>
+            <div class="col-lg-4 col-md-6"><label>Staff Name</label><input class="form-control" name="c_name"></div>
+            <div class="col-lg-4 col-md-6"><label>Mobile No</label><input class="form-control" name="c_mobile"></div>
+          </div>
+          <button class="btn btn-success" name="save_contact" type="submit"><i class="fa fa-save"></i> Save Contact</button>
+        </form>
+
+        <div class="dt-container">
+          <table id="contactTable" class="table table-striped table-bordered">
+            <thead>
+              <tr><th>Branch</th><th>Designation</th><th>Name</th><th>Mobile</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+            <?php if($r_contact){ while($r = mysqli_fetch_assoc($r_contact)){ ?>
+              <tr data-table="branch_contacts" data-id="<?=htmlspecialchars($r['id'])?>">
+                <td contenteditable="true" class="editable" data-col="branch_name"><?=htmlspecialchars($r['branch_name']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="designation"><?=htmlspecialchars($r['designation']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="staff_name"><?=htmlspecialchars($r['staff_name']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="mobile_no"><?=htmlspecialchars($r['mobile_no']??'')?></td>
+                <td class="row-actions">
+                  <button class="btn btn-xs btn-primary js-save-row"><i class="fa fa-save"></i></button>
+                  <button class="btn btn-xs btn-danger js-delete-row"><i class="fa fa-trash"></i></button>
+                </td>
+              </tr>
+            <?php }} ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4) DAILY CASH & DENOMINATIONS -->
+    <div class="panel panel-default">
+      <div class="panel-heading"><h3 class="panel-title">4) Daily Branch Cash & Denominations</h3></div>
+      <div class="panel-body">
+        <?php if(!empty($ok_cash)) echo '<div class="note">Saved: Daily Cash & Denominations.</div>'; ?>
+        <form method="post" id="cashForm">
+          <div class="row form-row">
+            <div class="col-lg-4 col-md-6">
+              <label>Branch Name</label>
+              <select class="form-control" name="d_branch">
+                <?php echo $branchSelectHtml; ?>
+              </select>
+            </div>
+            <div class="col-lg-4 col-md-6">
+              <label>Date</label>
+              <input class="form-control" name="d_date" id="d_date" value="<?php echo date('Y-m-d'); ?>">
+            </div>
+            <div class="col-lg-4 col-md-6"><label>Opening Cash</label><input class="form-control" name="d_opening_cash"></div>
+
+            <div class="col-lg-4 col-md-6"><label>HO Fund Receive</label><input class="form-control" name="d_ho_fund_receive"></div>
+            <div class="col-lg-4 col-md-6"><label>Inter Branch Fund Receive</label><input class="form-control" name="d_inter_branch_receive"></div>
+            <div class="col-lg-4 col-md-6"><label>Re/Pledge Commission</label><input class="form-control" name="d_re_pledge_commission"></div>
+
+            <div class="col-lg-4 col-md-6"><label>IMPS/RTGS</label><input class="form-control" name="d_imps_rtgs"></div>
+            <div class="col-lg-4 col-md-6"><label>Inter Branch Fund Transfer</label><input class="form-control" name="d_inter_branch_transfer"></div>
+            <div class="col-lg-4 col-md-6"><label>Business Amt</label><input class="form-control" name="d_business_amt"></div>
+
+            <div class="col-lg-4 col-md-6"><label>Branch Expns</label><input class="form-control" name="d_branch_expns"></div>
+            <div class="col-lg-4 col-md-6"><label>Today Gold (g)</label><input class="form-control" name="d_today_gold"></div>
+            <div class="col-lg-4 col-md-6"><label>Today Silver (g)</label><input class="form-control" name="d_today_silver"></div>
+
+            <div class="col-lg-4 col-md-6"><label>Closing Balance</label><input class="form-control" name="d_closing_balance" id="closingBalance"></div>
+          </div>
+
+          <h5>Cash Denomination (Counts)</h5>
+          <div class="row form-row">
+            <div class="col-lg-2 col-md-3 col-sm-4"><label>2000</label><input class="form-control deno" data-val="2000" name="deno_2000"></div>
+            <div class="col-lg-2 col-md-3 col-sm-4"><label>500</label><input class="form-control deno" data-val="500"  name="deno_500"></div>
+            <div class="col-lg-2 col-md-3 col-sm-4"><label>200</label><input class="form-control deno" data-val="200"  name="deno_200"></div>
+            <div class="col-lg-2 col-md-3 col-sm-4"><label>100</label><input class="form-control deno" data-val="100"  name="deno_100"></div>
+            <div class="col-lg-2 col-md-3 col-sm-4"><label>50</label><input class="form-control deno" data-val="50"   name="deno_50"></div>
+            <div class="col-lg-2 col-md-3 col-sm-4"><label>20</label><input class="form-control deno" data-val="20"   name="deno_20"></div>
+            <div class="col-lg-2 col-md-3 col-sm-4"><label>10</label><input class="form-control deno" data-val="10"   name="deno_10"></div>
+            <div class="col-lg-2 col-md-3 col-sm-4"><label>5</label><input class="form-control deno" data-val="5"    name="deno_5"></div>
+            <div class="col-lg-2 col-md-3 col-sm-4"><label>2</label><input class="form-control deno" data-val="2"    name="deno_2"></div>
+            <div class="col-lg-2 col-md-3 col-sm-4"><label>1</label><input class="form-control deno" data-val="1"    name="deno_1"></div>
+            <div class="col-lg-4 col-md-6"><label>Total (auto)</label><input class="form-control" name="deno_total" id="denoTotal" readonly></div>
+          </div>
+
+          <h5>Counts</h5>
+          <div class="row form-row">
+            <div class="col-lg-4 col-md-6"><label>No of Visit</label><input class="form-control" name="no_visit"></div>
+            <div class="col-lg-4 col-md-6"><label>No of Business</label><input class="form-control" name="no_business"></div>
+            <div class="col-lg-4 col-md-6"><label>No of Enquiry</label><input class="form-control" name="no_enquiry"></div>
+          </div>
+
+          <button class="btn btn-success" name="save_cash" type="submit"><i class="fa fa-save"></i> Save Daily Cash</button>
+        </form>
+
+        <div class="dt-container">
+          <table id="cashTable" class="table table-striped table-bordered">
+            <thead>
+              <tr>
+                <th>Date</th><th>Branch</th><th>Opening</th><th>HO Fund</th><th>IB Receive</th><th>Re/Pledge</th>
+                <th>IMPS/RTGS</th><th>IB Transfer</th><th>Business</th><th>Expense</th><th>Gold(g)</th><th>Silver(g)</th><th>Closing</th><th>Deno Total</th><th>Visit</th><th>Business#</th><th>Enquiry</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+            <?php if($r_cash){ while($r = mysqli_fetch_assoc($r_cash)){ ?>
+              <tr data-table="daily_branch_cash" data-id="<?=htmlspecialchars($r['id'])?>">
+                <td contenteditable="true" class="editable" data-col="date_"><?=htmlspecialchars($r['date_']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="branch_name"><?=htmlspecialchars($r['branch_name']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="opening_cash"><?=htmlspecialchars($r['opening_cash']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="ho_fund_receive"><?=htmlspecialchars($r['ho_fund_receive']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="inter_branch_fund_receive"><?=htmlspecialchars($r['inter_branch_fund_receive']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="re_pledge_commission"><?=htmlspecialchars($r['re_pledge_commission']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="imps_rtgs"><?=htmlspecialchars($r['imps_rtgs']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="inter_branch_fund_transfer"><?=htmlspecialchars($r['inter_branch_fund_transfer']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="business_amt"><?=htmlspecialchars($r['business_amt']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="branch_expns"><?=htmlspecialchars($r['branch_expns']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="today_gold"><?=htmlspecialchars($r['today_gold']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="today_silver"><?=htmlspecialchars($r['today_silver']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="closing_balance"><?=htmlspecialchars($r['closing_balance']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="deno_total"><?=htmlspecialchars($r['deno_total']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="no_of_visit"><?=htmlspecialchars($r['no_of_visit']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="no_of_business"><?=htmlspecialchars($r['no_of_business']??'')?></td>
+                <td contenteditable="true" class="editable" data-col="no_of_enquiry"><?=htmlspecialchars($r['no_of_enquiry']??'')?></td>
+                <td class="row-actions">
+                  <button class="btn btn-xs btn-primary js-save-row"><i class="fa fa-save"></i></button>
+                </td>
+              </tr>
+            <?php }} ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /#page-content -->
+</div><!-- /#wrapper -->
+
+<script>
+/* keep time ticking for visit / release */
+function setNowTime(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const pad = n => String(n).padStart(2, '0');
+  const d=new Date();
+  el.value = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+setInterval(function(){
+  setNowTime('v_time');
+  setNowTime('r_time');
+}, 1000);
+
+/* Auto-calc Denomination total */
+(function(){
+  function recalc(){
+    var total = 0;
+    document.querySelectorAll('.deno').forEach(function(inp){
+      var cnt = parseFloat(inp.value||0), val = parseFloat(inp.dataset.val||0);
+      if(!isNaN(cnt) && !isNaN(val)) total += cnt*val;
+    });
+    var out = document.getElementById('denoTotal');
+    if (out) out.value = total ? total.toFixed(2) : '';
+  }
+  document.querySelectorAll('.deno').forEach(function(inp){
+    ['input','change','keyup'].forEach(function(ev){ inp.addEventListener(ev,recalc); });
+  });
+})();
+
+/* ---------- DataTables init (keep references) ---------- */
+var visitDT, releaseDT, contactDT, cashDT;
+
+$(function(){
+  visitDT   = $('#visitTable').DataTable({ pageLength: 10, order: [[0,'desc']], responsive: true });
+  releaseDT = $('#releaseTable').DataTable({ pageLength: 10, order: [[0,'desc']], responsive: true });
+  contactDT = $('#contactTable').DataTable({ pageLength: 10, order: [[0,'asc']],  responsive: true });
+  cashDT    = $('#cashTable').DataTable({ pageLength: 10, order: [[0,'desc']], responsive: true });
+});
+
+/* --------- Inline Save/Delete (AJAX) ---------- */
+function collectRowPayload($tr){
+  var payload = {};
+  $tr.find('[contenteditable][data-col]').each(function(){
+    var col = this.getAttribute('data-col');
+    payload[col] = $(this).text().trim();
+  });
+  return payload;
+}
+
+$(document).on('click','.js-save-row', function(e){
+  e.preventDefault();
+  var $tr = $(this).closest('tr');
+  var table = $tr.data('table');
+  var id    = $tr.data('id');
+  var payload = collectRowPayload($tr);
+
+  $.post(window.location.href, {
+    ajax: 1,
+    action: 'update',
+    table: table,
+    id: id,
+    payload: payload
+  }, function(res){
+    if(res && res.ok){
+      alert('Saved');
+    } else {
+      alert('Save failed: ' + (res && res.msg ? res.msg : 'Unknown error'));
+    }
+  }, 'json');
+});
+
+$(document).on('click','.js-delete-row', function(e){
+  e.preventDefault();
+  if(!confirm('Delete this contact?')) return;
+
+  var $tr   = $(this).closest('tr');
+  var table = $tr.data('table');
+  var id    = $tr.data('id');
+
+  $.post(window.location.href, {
+    ajax: 1,
+    action: 'delete',
+    table: table,
+    id: id
+  }, function(res){
+    if(res && res.ok){
+      // remove from DataTables properly
+      if (table === 'branch_contacts' && contactDT) {
+        contactDT.row($tr).remove().draw(false);  // redraw without reloading page
+      } else {
+        // fallback – in case you later allow delete on other tables
+        $tr.remove();
+      }
+    } else {
+      alert('Delete failed: ' + (res && res.msg ? res.msg : 'Unknown error'));
+    }
+  }, 'json');
+});
+</script>
+
+<?php include("footer.php"); ?>
+</body>
+</html>
+

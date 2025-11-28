@@ -1,0 +1,19 @@
+{
+	"Sender" : "ATTGPL",
+	"API" : "Ac1114feab4e31bdfaef1f02d3d3c23e7",
+	"URL": "api-alerts.solutionsinfini.com/v3/?method=sms&api_key=API&to=PHONE_NUMBER&sender=SENDER&message=TEMPLATE_MESSAGE",
+	"SMS" : {				
+		"BM_Login": {
+			"Template_ID": "1007292497050267336",
+			"Template": "Dear {#var#}, use this One Time Password (OTP): {#var#} to log in to your Attica Gold Company Account."
+		},
+		"Customer_Verification": {
+			"Template_ID": "1007674320713245792",
+			"Template": "Dear {#var#}, Welcome to Attica Gold Company, your registration code is {#var#}."
+		},
+		"Branch_Address": {
+			"Template_ID": "1007431210784791008",
+			"Template": "Dear Customer, Thank you for choosing Attica Gold Company, Click the link to find your nearest branch: {#var#}"
+		}
+	}
+}

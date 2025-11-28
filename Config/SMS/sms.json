@@ -1,0 +1,30 @@
+{
+  "Sender": "ATTGPL",
+  "API": "Ac1114feab4e31bdfaef1f02d3d3c23e7",
+  "BaseURL": "https://api-alerts.solutionsinfini.com/v3/",
+  "Entity_ID": "",
+  "SMS": {
+    "BM_Login": {
+      "Template_ID": "1007292497050267336",
+      "Template": "Dear {#var#}, use this One Time Password (OTP): {#var#} to log in to your Attica Gold Company Account."
+    },
+    "Customer_Verification": {
+      "Template_ID": "1007674320713245792",
+      "Template": "Dear {#var#}, Welcome to Attica Gold Company, your registration code is {#var#}."
+    },
+    "Branch_Address": {
+      "Template_ID": "1007431210784791008",
+      "Template": "Dear Customer, Thank you for choosing Attica Gold Company, Click the link to find your nearest branch: {#var#}"
+    },
+    "Lawyer_Case_Reminder": {
+      "Template_ID": "1407176113856786528",
+      "Template": "Dear {#var#}, this is a reminder that your case {#var#} is scheduled for {#var#}.",
+      "Sender": "ATTICA"
+    },
+	"TE_Cash_Move": {
+  		"Template_ID": "1007xxxxxxxxxxxxx",
+  		"Template": "Dear {#var#}, cash movement approved from {#var#} to {#var#} of Rs {#var#} on {#var#}. Please coordinate and confirm receipt. - Attica Gold Company"
+}
+  }
+}
+
